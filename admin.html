@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VYRO Admin</title>
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <div id="loginScreen" class="auth-screen">
+      <div class="auth-card">
+        <div class="brand-wrap">
+          <a href="index.html" class="logo">VYRO<span>.</span></a>
+        </div>
+        <p class="eyebrow">PRIVATE CONTROL</p>
+        <h1>لوحة الإدارة</h1>
+        <p class="intro-text">إدارة المنتجات والطلبات من مكان واحد.</p>
+
+        <form id="loginForm">
+          <label>
+            كلمة المرور
+            <input id="passwordInput" type="password" placeholder="أدخل كلمة المرور" required />
+          </label>
+          <button type="submit" class="btn btn-primary">دخول</button>
+          <p id="loginMessage" class="form-message" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
+
+    <main id="adminApp" class="hidden">
+      <header class="admin-header container">
+        <div>
+          <div class="brand-wrap">
+            <a href="index.html" class="logo">VYRO<span>.</span></a>
+          </div>
+          <p class="eyebrow">CONTROL CENTER</p>
+          <h1>إدارة المتجر</h1>
+        </div>
+
+        <div class="admin-actions">
+          <a href="index.html" class="nav-link">عرض المتجر</a>
+          <button type="button" id="logoutBtn" class="btn btn-secondary">تسجيل الخروج</button>
+        </div>
+      </header>
+
+      <section class="stats container">
+        <article class="stat-box">
+          <span>إجمالي الطلبات</span>
+          <strong id="totalOrders">0</strong>
+        </article>
+        <article class="stat-box">
+          <span>إجمالي المبيعات</span>
+          <strong id="totalSales">0</strong>
+        </article>
+        <article class="stat-box">
+          <span>إجمالي المنتجات</span>
+          <strong id="totalProducts">0</strong>
+        </article>
+        <article class="stat-box">
+          <span>إجمالي المخزون</span>
+          <strong id="totalStock">0</strong>
+        </article>
+      </section>
+
+      <section class="panel container">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">LATEST ORDERS</p>
+            <h2>آخر الطلبات</h2>
+          </div>
+          <button type="button" id="clearOrdersBtn" class="btn btn-secondary">مسح الطلبات</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>رقم الطلب</th>
+                <th>العميل</th>
+                <th>التاريخ</th>
+                <th>الإجمالي</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel container">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">PRODUCT FORM</p>
+            <h2 id="formTitle">إضافة منتج</h2>
+          </div>
+          <button type="button" id="cancelEditBtn" class="btn btn-secondary hidden-btn">إلغاء</button>
+        </div>
+
+        <form id="productForm">
+          <div class="form-grid">
+            <label>
+              اسم المنتج
+              <input id="productName" type="text" required />
+            </label>
+            <label>
+              التصنيف
+              <select id="productCategory">
+                <option value="basic">أساسي</option>
+                <option value="oversize">أوفر سايز</option>
+              </select>
+            </label>
+            <label>
+              السعر
+              <input id="productPrice" type="number" min="0" required />
+            </label>
+            <label>
+              المخزون
+              <input id="productStock" type="number" min="0" value="0" required />
+            </label>
+          </div>
+
+          <label class="checkbox-row">
+            <input id="productActive" type="checkbox" checked />
+            <span>ظاهر في المتجر</span>
+          </label>
+
+          <button type="submit" class="btn btn-primary">حفظ المنتج</button>
+          <p id="productMessage" class="form-message" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="panel container">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">CATALOG</p>
+            <h2>المنتجات</h2>
+          </div>
+          <input id="searchInput" type="search" class="search-box" placeholder="ابحث عن منتج..." />
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>المنتج</th>
+                <th>التصنيف</th>
+                <th>السعر</th>
+                <th>المخزون</th>
+                <th>الحالة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="productsTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="admin.js"></script>
+  </body>
+</html>
