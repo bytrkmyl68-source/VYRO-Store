@@ -1,425 +1,313 @@
-const PRODUCT_STORAGE_KEY = 'vyro_store_products';
-const CART_STORAGE_KEY = 'vyro_store_cart';
-const ACCOUNT_STORAGE_KEY = 'vyro_store_account';
-const ORDER_STORAGE_KEY = 'vyro_store_orders';
+const ADMIN_PASSWORD = 'vyro123456';
+const PRODUCT_KEY = 'vyro_products';
+const ORDER_KEY = 'vyro_orders';
+const ADMIN_SESSION_KEY = 'vyro_admin_logged_in';
 
-const defaultProducts = [
-  {
-    id: 1,
-    name: 'Aero Black Tee',
-    category: 'basic',
-    price: 449,
-    stock: 15,
-    active: true,
-    badge: 'Bestseller',
-    image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80'
-  },
-  {
-    id: 2,
-    name: 'Core Oversize',
-    category: 'oversize',
-    price: 599,
-    stock: 8,
-    active: true,
-    badge: 'New',
-    image: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=900&q=80'
-  },
-  {
-    id: 3,
-    name: 'Signal Graphic',
-    category: 'basic',
-    price: 529,
-    stock: 11,
-    active: true,
-    badge: 'Trend',
-    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=80'
-  },
-  {
-    id: 4,
-    name: 'Urban Fade',
-    category: 'oversize',
-    price: 649,
-    stock: 4,
-    active: true,
-    badge: 'Limited',
-    image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=80'
-  },
-  {
-    id: 5,
-    name: 'Minimal White',
-    category: 'basic',
-    price: 470,
-    stock: 18,
-    active: true,
-    badge: 'Classic',
-    image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80'
-  },
-  {
-    id: 6,
-    name: 'Night Drop',
-    category: 'oversize',
-    price: 699,
-    stock: 6,
-    active: true,
-    badge: 'Hot',
-    image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=80'
+const $ = (id) => document.getElementById(id);
+let currentImage = '';
+let editingProductId = null;
+
+const money = (value) => `${Number(value).toLocaleString('ar-EG')} ج.م`;
+
+function getProducts() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]');
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
   }
-];
-
-let products = JSON.parse(localStorage.getItem(PRODUCT_STORAGE_KEY) || 'null') || defaultProducts;
-let cart = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]');
-let currentFilter = 'all';
-
-const formatMoney = (value) => `${Number(value).toLocaleString('ar-EG')} ج.م`;
-
-function saveCart() {
-  localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
 }
 
-function saveProducts() {
-  localStorage.setItem(PRODUCT_STORAGE_KEY, JSON.stringify(products));
+function saveProducts(products) {
+  localStorage.setItem(PRODUCT_KEY, JSON.stringify(products));
 }
 
-function getProductById(productId) {
-  return products.find((product) => product.id === productId);
+function getOrders() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(ORDER_KEY) || '[]');
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveOrders(orders) {
+  localStorage.setItem(ORDER_KEY, JSON.stringify(orders));
+}
+
+function seedProducts() {
+  if (getProducts().length) return;
+
+  const starter = [
+    { id: crypto.randomUUID(), name: 'تيشيرت كلاسيك', category: 'basic', price: 299, stock: 12, active: true, image: '' },
+    { id: crypto.randomUUID(), name: 'جاكيت اوفر سايز', category: 'oversize', price: 499, stock: 8, active: true, image: '' },
+    { id: crypto.randomUUID(), name: 'هودي أساسي', category: 'basic', price: 349, stock: 15, active: false, image: '' }
+  ];
+
+  saveProducts(starter);
+}
+
+function seedOrders() {
+  if (getOrders().length) return;
+
+  const starter = [
+    { id: '#1001', customer: 'سارة ح', date: '2026-09-18', total: 598, status: 'مكتمل' },
+    { id: '#1002', customer: 'أحمد م', date: '2026-09-18', total: 299, status: 'قيد التنفيذ' },
+    { id: '#1003', customer: 'محمود س', date: '2026-09-17', total: 499, status: 'مكتمل' }
+  ];
+
+  saveOrders(starter);
+}
+
+function updateStats() {
+  const products = getProducts();
+  const orders = getOrders();
+
+  $('totalOrders').textContent = String(orders.length);
+  $('totalSales').textContent = money(
+    orders.reduce((sum, order) => sum + (Number(order.total) || 0), 0)
+  );
+  $('totalProducts').textContent = String(products.length);
+  $('totalStock').textContent = String(
+    products.reduce((sum, item) => sum + (Number(item.stock) || 0), 0)
+  );
+}
+
+function renderOrders() {
+  const orders = getOrders();
+
+  if (!orders.length) {
+    $('ordersTable').innerHTML = '<tr><td colspan="5" class="table-empty">لا توجد طلبات حتى الآن</td></tr>';
+    return;
+  }
+
+  $('ordersTable').innerHTML = orders
+    .slice()
+    .reverse()
+    .map((order) => `
+      <tr>
+        <td>${order.id}</td>
+        <td>${order.customer}</td>
+        <td>${order.date}</td>
+        <td>${money(order.total)}</td>
+        <td><span class="status-pill ${order.status === 'مكتمل' ? 'on' : 'off'}">${order.status}</span></td>
+      </tr>
+    `)
+    .join('');
 }
 
 function renderProducts() {
-  const grid = document.getElementById('productGrid');
-  const visibleProducts = products.filter((product) => {
-    if (!product.active) return false;
-    return currentFilter === 'all' || product.category === currentFilter;
+  const products = getProducts();
+  const query = $('searchInput')?.value?.trim().toLowerCase() || '';
+  const filtered = products.filter((product) => {
+    const name = (product.name || '').toLowerCase();
+    return !query || name.includes(query);
   });
 
-  if (!visibleProducts.length) {
-    grid.innerHTML = '<p class="empty-cart">لا توجد منتجات في هذا التصنيف حالياً.</p>';
+  if (!filtered.length) {
+    $('productsTable').innerHTML = '<tr><td colspan="6" class="table-empty">لا توجد منتجات</td></tr>';
     return;
   }
 
-  grid.innerHTML = visibleProducts.map((product) => `
-    <article class="product-card">
-      <div class="product-image">
-        ${product.image ? `<img src="${product.image}" alt="${product.name}" />` : `<div class="product-placeholder">VYRO</div>`}
-        ${product.badge ? `<span class="badge">${product.badge}</span>` : ''}
-      </div>
+  $('productsTable').innerHTML = filtered
+    .map((product) => {
+      const thumb = product.image
+        ? `<img src="${product.image}" alt="${product.name}" />`
+        : `<span class="product-thumb">${(product.name || 'V').charAt(0)}</span>`;
 
-      <button class="add-btn" type="button" data-add-id="${product.id}" aria-label="إضافة ${product.name} إلى السلة">+</button>
+      return `
+        <tr>
+          <td>
+            <div class="product-table-cell">
+              ${thumb}
+              <span>${product.name}</span>
+            </div>
+          </td>
+          <td>${product.category === 'oversize' ? 'أوفر سايز' : 'أساسي'}</td>
+          <td>${money(product.price)}</td>
+          <td>${product.stock}</td>
+          <td><span class="status-pill ${product.active ? 'on' : 'off'}">${product.active ? 'ظاهر' : 'مخفي'}</span></td>
+          <td>
+            <div class="actions">
+              <button type="button" class="action-btn" data-action="edit" data-id="${product.id}">تعديل</button>
+              <button type="button" class="action-btn danger" data-action="delete" data-id="${product.id}">حذف</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    })
+    .join('');
 
-      <div class="product-body">
-        <h3>${product.name}</h3>
-        <div class="product-meta">
-          <span>${product.category === 'oversize' ? 'أوفر سايز' : 'أساسي'}</span>
-          <span>${product.stock > 0 ? 'متاح' : 'نفد'}</span>
-        </div>
-        <span class="product-price">${formatMoney(product.price)}</span>
-      </div>
-    </article>
-  `).join('');
-
-  document.querySelectorAll('[data-add-id]').forEach((button) => {
-    button.addEventListener('click', () => addToCart(Number(button.dataset.addId)));
+  document.querySelectorAll('[data-action="edit"]').forEach((button) => {
+    button.addEventListener('click', () => editProduct(button.dataset.id));
   });
-}
 
-function renderCart() {
-  const cartItems = document.getElementById('cartItems');
-  const cartCount = document.getElementById('cartCount');
-  const cartTotal = document.getElementById('cartTotal');
-
-  if (!cart.length) {
-    cartItems.innerHTML = '<p class="empty-cart">السلة فارغة الآن.<br />أضف بعض القطع المفضلة.</p>';
-    cartCount.textContent = '0';
-    cartTotal.textContent = '0 ج.م';
-    return;
-  }
-
-  let total = 0;
-  let count = 0;
-
-  cartItems.innerHTML = cart.map((item) => {
-    const product = getProductById(item.id);
-    if (!product) return '';
-
-    total += product.price * item.qty;
-    count += item.qty;
-
-    return `
-      <div class="cart-item">
-        <div>
-          <h4>${product.name}</h4>
-          <small>${formatMoney(product.price)} × ${item.qty}</small>
-        </div>
-        <div class="qty-box">
-          <button type="button" data-qty-action="minus" data-product-id="${product.id}">−</button>
-          <strong>${item.qty}</strong>
-          <button type="button" data-qty-action="plus" data-product-id="${product.id}">+</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  cartCount.textContent = String(count);
-  cartTotal.textContent = formatMoney(total);
-
-  document.querySelectorAll('[data-qty-action]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const productId = Number(button.dataset.productId);
-      const action = button.dataset.qtyAction;
-      changeQty(productId, action === 'plus' ? 1 : -1);
-    });
+  document.querySelectorAll('[data-action="delete"]').forEach((button) => {
+    button.addEventListener('click', () => deleteProduct(button.dataset.id));
   });
 }
 
-function addToCart(productId) {
-  const product = getProductById(productId);
-  if (!product || product.stock <= 0) return;
-
-  const item = cart.find((entry) => entry.id === productId);
-  if (item) {
-    if (item.qty < product.stock) item.qty += 1;
-  } else {
-    cart.push({ id: productId, qty: 1 });
-  }
-
-  saveCart();
-  renderCart();
-  openCart();
+function setStatusMessage(element, message, isError = false) {
+  element.textContent = message;
+  element.style.color = isError ? '#b03939' : '#1f7a45';
 }
 
-function changeQty(productId, delta) {
-  const item = cart.find((entry) => entry.id === productId);
-  if (!item) return;
+function showPreview(src) {
+  const wrap = $('imagePreviewWrap');
+  const preview = $('imagePreview');
 
-  item.qty += delta;
-  if (item.qty <= 0) {
-    cart = cart.filter((entry) => entry.id !== productId);
-  }
-
-  saveCart();
-  renderCart();
-}
-
-function openCart() {
-  document.getElementById('cartPanel').classList.add('open');
-  document.getElementById('overlay').classList.add('visible');
-}
-
-function closeCart() {
-  document.getElementById('cartPanel').classList.remove('open');
-  document.getElementById('overlay').classList.remove('visible');
-}
-
-function openModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (!modal) return;
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
-}
-
-function closeModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (!modal) return;
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden', 'true');
-}
-
-function getAccount() {
-  return JSON.parse(localStorage.getItem(ACCOUNT_STORAGE_KEY) || 'null');
-}
-
-function setAccount(account) {
-  localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(account));
-}
-
-function handleCheckout() {
-  if (!cart.length) {
-    alert('أضف منتجًا للسلة أولًا.');
+  if (!src) {
+    wrap.classList.add('hidden');
+    preview.src = '';
+    currentImage = '';
     return;
   }
 
-  const account = getAccount();
-  if (!account) {
-    document.getElementById('authMessage').textContent = 'يجب إنشاء حساب قبل إتمام الشراء.';
-    openModal('authModal');
-    return;
-  }
-
-  document.getElementById('signedInUser').textContent = `مسجل الدخول باسم: ${account.name}`;
-  openModal('orderModal');
+  wrap.classList.remove('hidden');
+  preview.src = src;
+  currentImage = src;
 }
 
-function submitOrder(event) {
+function resetForm() {
+  $('productForm').reset();
+  $('productActive').checked = true;
+  $('productStock').value = 0;
+  editingProductId = null;
+  currentImage = '';
+  showPreview('');
+  $('formTitle').textContent = 'إضافة منتج';
+  $('cancelEditBtn').classList.add('hidden-btn');
+  $('productMessage').textContent = '';
+}
+
+function editProduct(id) {
+  const product = getProducts().find((item) => item.id === id);
+  if (!product) return;
+
+  editingProductId = id;
+  $('productName').value = product.name || '';
+  $('productCategory').value = product.category || 'basic';
+  $('productPrice').value = product.price || 0;
+  $('productStock').value = product.stock || 0;
+  $('productActive').checked = Boolean(product.active);
+  $('formTitle').textContent = 'تعديل المنتج';
+  $('cancelEditBtn').classList.remove('hidden-btn');
+  showPreview(product.image || '');
+  $('productMessage').textContent = '';
+  $('productName').focus();
+}
+
+function deleteProduct(id) {
+  const products = getProducts();
+  const product = products.find((item) => item.id === id);
+  if (!product) return;
+
+  const confirmed = window.confirm(`هل تريد حذف المنتج: ${product.name}?`);
+  if (!confirmed) return;
+
+  const next = products.filter((item) => item.id !== id);
+  saveProducts(next);
+  renderProducts();
+  updateStats();
+}
+
+function handleProductSubmit(event) {
   event.preventDefault();
 
-  const account = getAccount();
-  if (!account) {
+  const name = $('productName').value.trim();
+  const category = $('productCategory').value;
+  const price = Number($('productPrice').value);
+  const stock = Number($('productStock').value);
+  const active = $('productActive').checked;
+
+  if (!name || !Number.isFinite(price) || !Number.isFinite(stock)) {
+    setStatusMessage($('productMessage'), 'يرجى إدخال بيانات المنتج بشكل صحيح.', true);
     return;
   }
 
-  const phone = document.getElementById('customerPhone').value.trim();
-  const address = document.getElementById('customerAddress').value.trim();
-
-  if (!phone || !address) {
-    document.getElementById('orderMessage').textContent = 'يرجى إدخال بيانات الطلب كاملة.';
-    return;
-  }
-
-  const orderTotal = cart.reduce((sum, item) => {
-    const product = getProductById(item.id);
-    return sum + (product ? product.price * item.qty : 0);
-  }, 0);
-
-  const order = {
-    id: `VY-${Date.now().toString().slice(-6)}`,
-    user: account,
-    phone,
-    address,
-    items: cart,
-    total: orderTotal,
-    status: 'جديد',
-    createdAt: new Date().toISOString()
+  const products = getProducts();
+  const payload = {
+    id: editingProductId || crypto.randomUUID(),
+    name,
+    category,
+    price,
+    stock,
+    active,
+    image: currentImage
   };
 
-  const orders = JSON.parse(localStorage.getItem(ORDER_STORAGE_KEY) || '[]');
-  orders.unshift(order);
-  localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(orders));
+  const nextProducts = editingProductId
+    ? products.map((item) => (item.id === editingProductId ? payload : item))
+    : [payload, ...products];
 
-  cart = [];
-  saveCart();
-  renderCart();
-
-  document.getElementById('orderMessage').textContent = `تم تأكيد طلبك بنجاح: ${order.id}`;
-
-  setTimeout(() => {
-    closeModal('orderModal');
-    document.getElementById('orderForm').reset();
-    document.getElementById('orderMessage').textContent = '';
-    closeCart();
-  }, 1200);
+  saveProducts(nextProducts);
+  renderProducts();
+  updateStats();
+  resetForm();
+  setStatusMessage($('productMessage'), editingProductId ? 'تم تعديل المنتج بنجاح.' : 'تم إضافة المنتج بنجاح.');
 }
 
-function handleAccountSubmit(event) {
+function handleImageSelect(event) {
+  const [file] = event.target.files;
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => showPreview(reader.result);
+  reader.readAsDataURL(file);
+}
+
+function handleLoginSubmit(event) {
   event.preventDefault();
+  const password = $('passwordInput').value;
 
-  const name = document.getElementById('authName').value.trim();
-  const email = document.getElementById('authEmail').value.trim();
-  const password = document.getElementById('authPassword').value.trim();
-
-  if (!name || !email || !password) {
-    document.getElementById('authMessage').textContent = 'يرجى ملء جميع الحقول.';
+  if (password === ADMIN_PASSWORD) {
+    localStorage.setItem(ADMIN_SESSION_KEY, 'true');
+    $('loginScreen').classList.add('hidden');
+    $('adminApp').classList.remove('hidden');
+    $('loginMessage').textContent = '';
     return;
   }
 
-  const account = { name, email, password, createdAt: new Date().toISOString() };
-  setAccount(account);
-  document.getElementById('authMessage').textContent = 'تم إنشاء الحساب بنجاح.';
-
-  setTimeout(() => {
-    closeModal('authModal');
-    document.getElementById('authForm').reset();
-    document.getElementById('authMessage').textContent = '';
-    handleCheckout();
-  }, 600);
+  $('loginMessage').textContent = 'كلمة المرور غير صحيحة';
+  $('loginMessage').style.color = '#b03939';
 }
 
-document.getElementById('cartToggleBtn').addEventListener('click', () => {
-  const panel = document.getElementById('cartPanel');
-  if (panel.classList.contains('open')) {
-    closeCart();
-  } else {
-    openCart();
-  }
-});
+function logout() {
+  localStorage.removeItem(ADMIN_SESSION_KEY);
+  $('adminApp').classList.add('hidden');
+  $('loginScreen').classList.remove('hidden');
+  $('passwordInput').value = '';
+}
 
-document.getElementById('closeCartBtn').addEventListener('click', closeCart);
-document.getElementById('overlay').addEventListener('click', closeCart);
-document.getElementById('checkoutBtn').addEventListener('click', handleCheckout);
-document.getElementById('orderForm').addEventListener('submit', submitOrder);
-document.getElementById('authForm').addEventListener('submit', handleAccountSubmit);
-document.getElementById('accountBtn').addEventListener('click', () => {
-  const account = getAccount();
-  if (account) {
-    alert(`أهلاً ${account.name}! حسابك موجود بالفعل وطلبك يمكن إكماله بسهولة.`);
-    return;
-  }
-  openModal('authModal');
-});
+function init() {
+  seedProducts();
+  seedOrders();
 
-document.querySelectorAll('.filter-btn').forEach((button) => {
-  button.addEventListener('click', () => {
-    document.querySelectorAll('.filter-btn').forEach((btn) => btn.classList.remove('active'));
-    button.classList.add('active');
-    currentFilter = button.dataset.filter;
-    renderProducts();
+  $('loginForm').addEventListener('submit', handleLoginSubmit);
+  $('logoutBtn').addEventListener('click', logout);
+  $('clearOrdersBtn').addEventListener('click', () => {
+    const confirmClear = window.confirm('هل تريد حذف جميع الطلبات؟');
+    if (!confirmClear) return;
+    saveOrders([]);
+    renderOrders();
+    updateStats();
   });
-});
 
-document.querySelectorAll('[data-close]').forEach((button) => {
-  button.addEventListener('click', () => closeModal(button.dataset.close));
-});
-
-renderProducts();
-renderCart();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  $('productForm').addEventListener('submit', handleProductSubmit);
+  $('productImage').addEventListener('change', handleImageSelect);
+  $('removeImageBtn').addEventListener('click', () => showPreview(''));
+  $('cancelEditBtn').addEventListener('click', resetForm);
+  $('searchInput').addEventListener('input', renderProducts);
+
+  if (localStorage.getItem(ADMIN_SESSION_KEY) === 'true') {
+    $('loginScreen').classList.add('hidden');
+    $('adminApp').classList.remove('hidden');
+  }
+
+  renderProducts();
+  renderOrders();
+  updateStats();
+  resetForm();
+}
+
+document.addEventListener('DOMContentLoaded', init);
